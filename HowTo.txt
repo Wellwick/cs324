@@ -1,0 +1,9 @@
+What we gonna do
+
+Track class, each track point has
+    Direction with angle
+    Up direction, which can translate to what the up vector is in gluLookAt
+
+As addition we track just points on track and spline the points, with calculations occuring between
+with addition on the extruding normal to translate for the coaster car
+
