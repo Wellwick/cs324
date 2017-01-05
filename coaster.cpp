@@ -35,9 +35,10 @@ Track tracks[] = {t1, t2, t3};
 
 */
 
-float track1[] = {0.3, 0.5, 0.6};
-float track2[] = {-0.6, -0.2, 0.1};
-float track3[] = {0.2, 0.1, -0.7};
+float track[][3] = {{0.3, 0.5, 0.6},
+		   {-0.6, -0.2, 0.1},
+		   {0.2, 0.1, -0.7}};
+int trackCounter = 1; //counts which index in the track is next
 
 // properties of some material
 float mat_ambient[] = {0.05, 0.05, 0.05, 1.0};
@@ -45,10 +46,10 @@ float mat_diffuse[] = {0.75, 0.75, 0.75, 1.0};
 float mat_specular[] = {1.0, 1.0, 1.0, 1.0};
 float mat_shininess[] = {50.0};
 
-float pos[] = {track1[0], track1[1], track1[2]};
-float dir[] = {track2[0] - pos[0],
-	       track2[1] - pos[1],
-	       track2[2] - pos[2]};
+float pos[] = {track[0][0], track[0][1], track[0][2]};
+float dir[] = {(track[1][0] - pos[0])/50,
+	       (track[1][1] - pos[1])/50,
+	       (track[1][2] - pos[2])/50};
 
 bool g_moving = false;
 bool g_coasting = false;
@@ -57,9 +58,12 @@ void idle()
 {
 	usleep(100000);
 	//move the coaster
-	pos[0] += dir[0]/50;
-	pos[1] += dir[1]/50;
-	pos[2] += dir[2]/50;
+	pos[0] += dir[0];
+	pos[1] += dir[1];
+	pos[2] += dir[2];
+	//make sure we haven't overshot the destination
+	float tmp[] = {pos[0]+dir[0], pos[1]+dir[1], pos[2]+dir[2]};
+	
 	glutPostRedisplay();
 }
 
@@ -72,7 +76,7 @@ void display()
 	glLoadIdentity();
 	if (g_coasting) {
                 gluLookAt(pos[0], pos[1], pos[2], // eye position
-                          track2[0], track2[1], track2[2], // reference point
+                          track[1][0], track[1][1], track[1][2], // reference point
                           0, 1, 0  // up vector
                         );
         } else {
@@ -103,9 +107,9 @@ void display()
 
                 glColor4f(1.0f, 0.0f, 0.0f, 1.0f);
                 glBegin(GL_LINE_LOOP);
-			glVertex3f(track1[0], track1[1], track1[2]);
-			glVertex3f(track2[0], track2[1], track2[2]);
-			glVertex3f(track3[0], track3[1], track3[2]);
+			glVertex3f(track[0][0], track[0][1], track[0][2]);
+			glVertex3f(track[1][0], track[1][1], track[1][2]);
+			glVertex3f(track[2][0], track[2][1], track[2][2]);
                 glEnd();
                 
                 glColor4f(0.0f, 0.0f, 1.0f, 1.0f);
@@ -123,14 +127,22 @@ void display()
 	glutSwapBuffers(); 
 }
 
+void setNextTrack() {
+	trackCounter = (trackCounter + 1) % 3;
+	dir[0] = (track[trackCounter][0] - pos[0])/50;
+	dir[1] = (track[trackCounter][1] - pos[1])/50;
+	dir[2] = (track[trackCounter][2] - pos[2])/50;
+}
+
 void keyboard(unsigned char key, int, int)
 {
 	switch (key)
 	{
 		case 'q': exit(1); break;
-		case 'p': pos[0] = track2[0];
-			  pos[1] = track2[1];
-			  pos[2] = track2[2];
+		case 'p': pos[0] = track[trackCounter][0];
+			  pos[1] = track[trackCounter][1];
+			  pos[2] = track[trackCounter][2];
+			  setNextTrack();
 			  glutPostRedisplay();
 			  break;
 
