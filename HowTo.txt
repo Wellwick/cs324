@@ -1,6 +1,7 @@
 What we gonna do
 
 Track class, each track point has
+    Point in 3D space
     Direction with angle
     Up direction, which can translate to what the up vector is in gluLookAt
 
