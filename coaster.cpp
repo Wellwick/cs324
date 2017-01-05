@@ -111,7 +111,7 @@ void display()
 	glLoadIdentity();
 	if (g_coasting) {
                 gluLookAt(pos[0], pos[1], pos[2], // eye position
-                          0, 0, 0, // reference point
+                          pos[0]+dir[0], pos[1]+dir[1], pos[2]+dir[2], // reference point
                           0, 1, 0  // up vector
                         );
         } else {
