@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <unistd.h>
+#include <math.h>
 
 /*
 
@@ -54,6 +55,21 @@ float dir[] = {(track[1][0] - pos[0])/50,
 bool g_moving = false;
 bool g_coasting = false;
 
+void setNextTrack() {
+	trackCounter = (trackCounter + 1) % 3;
+	dir[0] = track[trackCounter][0] - pos[0];
+	dir[1] = track[trackCounter][1] - pos[1];
+	dir[2] = track[trackCounter][2] - pos[2];
+	//normalise the direction
+	float absoluteVal = (dir[0]*dir[0]) + (dir[1]*dir[1]) + (dir[2]*dir[2]);
+	absoluteVal = sqrt(absoluteVal);
+	//scale to a fiftieth of the speed
+	dir[0] = dir[0]/(absoluteVal*50);
+	dir[1] = dir[1]/(absoluteVal*50);
+	dir[2] = dir[2]/(absoluteVal*50);
+	
+}
+
 void idle()
 {
 	usleep(100000);
@@ -63,6 +79,25 @@ void idle()
 	pos[2] += dir[2];
 	//make sure we haven't overshot the destination
 	float tmp[] = {pos[0]+dir[0], pos[1]+dir[1], pos[2]+dir[2]};
+	//calculate square of distance to next track point
+	float dx = pos[0] - track[trackCounter][0];
+	float dy = pos[1] - track[trackCounter][1];
+	float dz = pos[2] - track[trackCounter][2];
+	float calcNow = (dx*dx) + (dy*dy) + (dz*dz);
+	
+	//calculate what it will be by next tick
+	dx = tmp[0] - track[trackCounter][0];
+	dy = tmp[1] - track[trackCounter][1];
+	dz = tmp[2] - track[trackCounter][2];
+	float calcNext = (dx*dx) + (dy*dy) + (dz*dz);
+	
+	//if we are going to be further away, just snap to the next point
+	if (calcNext > calcNow) {
+		pos[0] = track[trackCounter][0];
+		pos[1] = track[trackCounter][1];
+		pos[2] = track[trackCounter][2];
+		setNextTrack();
+	}
 	
 	glutPostRedisplay();
 }
@@ -76,7 +111,7 @@ void display()
 	glLoadIdentity();
 	if (g_coasting) {
                 gluLookAt(pos[0], pos[1], pos[2], // eye position
-                          track[1][0], track[1][1], track[1][2], // reference point
+                          0, 0, 0, // reference point
                           0, 1, 0  // up vector
                         );
         } else {
@@ -125,13 +160,6 @@ void display()
 
         glPopMatrix();
 	glutSwapBuffers(); 
-}
-
-void setNextTrack() {
-	trackCounter = (trackCounter + 1) % 3;
-	dir[0] = (track[trackCounter][0] - pos[0])/50;
-	dir[1] = (track[trackCounter][1] - pos[1])/50;
-	dir[2] = (track[trackCounter][2] - pos[2])/50;
 }
 
 void keyboard(unsigned char key, int, int)
