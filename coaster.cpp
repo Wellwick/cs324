@@ -38,6 +38,7 @@ Track tracks[] = {t1, t2, t3};
 
 float track[][3] = {{0.3, 0.5, 0.6},
 		   {-0.6, -0.2, 0.1},
+		   {-0.7, 0.4, 0.3},
 		   {0.2, 0.1, -0.7}};
 int trackCounter = 1; //counts which index in the track is next
 
@@ -56,7 +57,7 @@ bool g_moving = false;
 bool g_coasting = false;
 
 void setNextTrack() {
-	trackCounter = (trackCounter + 1) % 3;
+	trackCounter = (trackCounter + 1) % (sizeof(track)/sizeof(track[0]));
 	dir[0] = track[trackCounter][0] - pos[0];
 	dir[1] = track[trackCounter][1] - pos[1];
 	dir[2] = track[trackCounter][2] - pos[2];
@@ -67,7 +68,10 @@ void setNextTrack() {
 	dir[0] = dir[0]/(absoluteVal*50);
 	dir[1] = dir[1]/(absoluteVal*50);
 	dir[2] = dir[2]/(absoluteVal*50);
-	
+	/*
+	float speed = sqrt((dir[0]*dir[0]) + (dir[1]*dir[1]) + (dir[2]*dir[2]));
+	std::cout << "Speed for next section will be " << speed << std::endl;
+	*/
 }
 
 void idle()
@@ -110,7 +114,7 @@ void display()
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	if (g_coasting) {
-                gluLookAt(pos[0], pos[1], pos[2], // eye position
+                gluLookAt(pos[0], pos[1]+0.01f, pos[2], // eye position
                           pos[0]+dir[0], pos[1]+dir[1], pos[2]+dir[2], // reference point
                           0, 1, 0  // up vector
                         );
@@ -139,14 +143,16 @@ void display()
                         glVertex3f(1.0f, -1.0f, 1.0f);
                         glVertex3f(1.0f, -1.0f, -1.0f);
                 glEnd();
-
+		
+		//draw track
                 glColor4f(1.0f, 0.0f, 0.0f, 1.0f);
                 glBegin(GL_LINE_LOOP);
-			glVertex3f(track[0][0], track[0][1], track[0][2]);
-			glVertex3f(track[1][0], track[1][1], track[1][2]);
-			glVertex3f(track[2][0], track[2][1], track[2][2]);
+			for (unsigned int i=0; i < sizeof(track)/sizeof(track[0]); i++) {
+				glVertex3f(track[i][0], track[i][1], track[i][2]);
+			}
                 glEnd();
                 
+                //draw the cart
                 glColor4f(0.0f, 0.0f, 1.0f, 1.0f);
                 glBegin(GL_LINE_LOOP);
 			glVertex3f(pos[0]+0.02f, pos[1]+0.02f, pos[2]);
