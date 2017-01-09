@@ -11,31 +11,7 @@
 #include <unistd.h>
 #include <math.h>
 
-/*
-
-class Track {
-    public:
-	float coords[];
-	float direction[];
-};
-
-//prepare the Trac
-Track t1;
-Track t2;
-Track t3;
-
-t1.coords = {0.3, 0.5, 0.6};
-t2.coords = {-0.6, -0.2, 0.1};
-t3.coords = {0.2, 0.1, -0.7};
-
-t1.direction = t2.coords - t1.coords;
-t2.direction = t3.coords - t2.coords;
-t3.direction = t1.coords - t3.coords;
-
-Track tracks[] = {t1, t2, t3};
-
-*/
-
+//create multi-dimensional array for the track
 float track[][3] = {{0.3, 0.5, 0.6},
 		   {-0.6, -0.2, 0.1},
 		   {-0.7, 0.4, 0.3},
@@ -52,6 +28,7 @@ float pos[] = {track[0][0], track[0][1], track[0][2]};
 float dir[] = {(track[1][0] - pos[0])/50,
 	       (track[1][1] - pos[1])/50,
 	       (track[1][2] - pos[2])/50};
+float speed = 1.0f;
 
 bool g_moving = false;
 bool g_coasting = false;
@@ -78,9 +55,19 @@ void idle()
 {
 	usleep(100000);
 	//move the coaster
-	pos[0] += dir[0];
-	pos[1] += dir[1];
-	pos[2] += dir[2];
+	pos[0] += dir[0]*speed;
+	pos[1] += dir[1]*speed;
+	pos[2] += dir[2]*speed;
+	
+	//change speed based on how much we should accelerate
+	float dist = sqrt((dir[0]*dir[0]) + (dir[2]*dir[2]));
+	float angle = atan(dir[1]/dist);
+	float acceleration = (-sin(angle)*9.81)/60; 
+	if (angle < 0.0f) acceleration - 0.05f;
+	speed += acceleration;
+	if (speed < 1.0f) speed = 1.0f; //always maintain minimum speed
+	//std::cout << "Speed is currently " << speed << std::endl;
+	
 	//make sure we haven't overshot the destination
 	float tmp[] = {pos[0]+dir[0], pos[1]+dir[1], pos[2]+dir[2]};
 	//calculate square of distance to next track point
