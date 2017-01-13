@@ -69,12 +69,7 @@ float track[][3] = {{0.6, 0.8, -0.7},
 		   {0.72, 0.5, -0.71},
 		   {0.68, 0.7, -0.73},
 		   {0.65, 0.8, -0.71}};
-/*
-float track[][3] = {{0.3, 0.5, 0.6},
-		   {-0.6, -0.2, 0.1},
-		   {-0.7, 0.4, 0.3},
-		   {0.2, 0.1, -0.7}};
-*/
+
 int trackCounter[] = {1, 1, 1}; //counts which index in the track is next
 int loopCount[] = {0, 0, 0};
 
@@ -106,7 +101,7 @@ unsigned int g_track = 0;
 
 void setNextTrack(int i) {
     trackCounter[i] = (trackCounter[i] + 1) % (sizeof(track)/sizeof(track[0]));
-    loopCount[i]++; //loop count ignores when things loop
+    loopCount[i]++; //loop count ignores when things loop, currently unused
     dir[i][0] = track[trackCounter[i]][0] - pos[i][0];
     dir[i][1] = track[trackCounter[i]][1] - pos[i][1];
     dir[i][2] = track[trackCounter[i]][2] - pos[i][2];
@@ -159,8 +154,8 @@ void moveCart(int i) {
 	float dist = sqrt((dir[i][0]*dir[i][0]) + (dir[i][2]*dir[i][2]));
 	float angle = atan(dir[i][1]/dist);
 	float acceleration = (-sin(angle)*9.81)/60; 
-	if (angle < 0.0f) acceleration - 0.05f;
-	speed += acceleration;
+	if (angle < 0.0f) acceleration -= 0.05f;
+	speed += acceleration; 
 	if (speed < 1.0f) speed = 1.0f; //always maintain minimum speed
 	//std::cout << "Speed is currently " << speed << std::endl;
 	
@@ -182,22 +177,22 @@ void idle()
 	float dz = pos[i][2] - pos[i+1][2];
 	float dist =  sqrt((dx*dx)+(dy*dy)+(dz*dz));
 	
-	if (dist < 0.1f) {
+	if (dist < 0.05f) {
 	    //need to shift this one back a lot
 	    pos[i+1][0] -= dir[i+1][0]*speed*3;
 	    pos[i+1][1] -= dir[i+1][1]*speed*3;
 	    pos[i+1][2] -= dir[i+1][2]*speed*3;
-	} else if (dist < 0.2f) {
+	} else if (dist < 0.1f) {
 	    //need to shift this one back a bit
 	    pos[i+1][0] -= dir[i+1][0]*speed*(2/3);
 	    pos[i+1][1] -= dir[i+1][1]*speed*(2/3);
 	    pos[i+1][2] -= dir[i+1][2]*speed*(2/3);
-	} else if (dist > 0.4f) {
+	} else if (dist > 0.3f) {
 	    //need to shift this one forward a bit
 	    pos[i+1][0] += dir[i+1][0]*speed;
 	    pos[i+1][1] += dir[i+1][1]*speed;
 	    pos[i+1][2] += dir[i+1][2]*speed;
-	} else if (dist > 0.2f) {
+	} else if (dist > 0.1f) {
 	    //need to shift this one forward a bit
 	    pos[i+1][0] += dir[i+1][0]*speed*(1/3);
 	    pos[i+1][1] += dir[i+1][1]*speed*(1/3);
@@ -323,16 +318,55 @@ void display()
 	
 	glColor4f(1.0f, 1.0f, 0.0f, 1.0f);
 	
+	for (int i=0; i<sizeof(track)/sizeof(track[0]); i++) {
+	    int j = (i+1)%(sizeof(track)/sizeof(track[0]));
+	    float dx = track[j][0]-track[i][0];
+	    float dy = track[j][1]-track[i][1];
+	    float dz = track[j][2]-track[i][2];
+	    float dist = sqrt((dx*dx)+(dy*dy)+(dz*dz));
+	    //convert to unit vector
+	    dx = dx/dist;
+	    dy = dy/dist;
+	    dz = dz/dist;
+	    
+	    
+	    //calculate perpendicular vector using dot product and unit vector
+	    float px = 1.0f / (1.0f - (dx/dz));
+	    float py = 0.0f;
+	    float pz = 1.0f - px;
+	    float pDist = sqrt((px*px)+(pz*pz));
+	    
+	    px = px/pDist;
+	    pz = px/pDist;
+	    
+	    float cD = 0.0f; //for completed distance
+	    
+	    while (dist > cD + 0.005f) {
+		//lay down one rail and continue along the path
+		float x = track[i][0] + (dx*cD);
+		float y = track[i][1] + (dy*cD);
+		float z = track[i][2] + (dz*cD);
+		glBegin(GL_QUADS);
+		    glVertex3f(x+(px*0.01f), y, z+(pz*0.01f));
+		    glVertex3f(x+(px*0.01f)+(dx*0.002f), y, z+(pz*0.01f)+(dz*0.002f));
+		    glVertex3f(x+(px*-0.01f)+(dx*0.002f), y, z+(pz*-0.01f)+(dz*0.002f));
+		    glVertex3f(x+(px*-0.01f), y, z+(pz*-0.01f));
+		glEnd();
+		cD += 0.01f;
+	    }
+	    
+	}
+	
+	/*
 	glBegin(GL_LINE_LOOP);
 	    for (unsigned int i=0; i < sizeof(track)/sizeof(track[0]); i++) {
 		//need to figure out spot for left and right rail
 		//just shifting along the x dimension
 		
-		
 		glVertex3f(track[i][0], track[i][1], track[i][2]);
 	    }
 	glEnd();
-	
+	*/
 	//draw the cart
 	glColor4f(0.0f, 0.0f, 1.0f, 1.0f);
 	for (int i=0; i<sizeof(pos)/sizeof(pos[0]); i++) {
@@ -360,7 +394,7 @@ void spaceCarts() {
 	float dz = pos[i][2] - pos[i-1][2];
 	float dist =  sqrt((dx*dx)+(dy*dy)+(dz*dz));
 	
-	while (dist < 0.2f) {
+	while (dist < 0.1f) {
 	    //need to move all carts in front of this one forward
 	    //has to move front one last, since that is the one that informs speed
 	    for (int j=i-1; j>-1; j--) {
