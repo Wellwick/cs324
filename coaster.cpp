@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <math.h>
 
+#include "load_and_bind_texture.h"
+
 //create multi-dimensional array for the track
 float track[][3] = {{0.3, 0.5, 0.6},
 		   {-0.6, -0.2, 0.1},
@@ -32,6 +34,8 @@ float speed = 1.0f;
 
 bool g_moving = false;
 bool g_coasting = false;
+
+unsigned int g_track = 0;
 
 void setNextTrack() {
     trackCounter = (trackCounter + 1) % (sizeof(track)/sizeof(track[0]));
@@ -101,8 +105,8 @@ void display()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     if (g_coasting) {
-	gluLookAt(pos[0], pos[1]+0.05f, pos[2], // eye position
-		  pos[0]+dir[0], pos[1]+0.05f+dir[1], pos[2]+dir[2], // reference point
+	gluLookAt(pos[0], pos[1]+0.2f, pos[2], // eye position
+		  pos[0]+dir[0], pos[1]+0.2f+dir[1], pos[2]+dir[2], // reference point
 		  0, 1, 0  // up vector
 		);
     } else {
@@ -119,8 +123,7 @@ void display()
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
-
-	// add in transparent geometry in front of teapot
+	
 	glDisable(GL_LIGHTING);
 
 	glColor4f(0.0f, 1.0f, 0.0f, 1.0f);
@@ -146,6 +149,25 @@ void display()
 	    glVertex3f(0.8f, -0.9f, 1.0f);
 	glEnd();
 	
+	
+	// enable texturing
+	glEnable(GL_TEXTURE_2D); 
+	
+	//prep the texture
+	glBindTexture(GL_TEXTURE_2D, g_track);
+	// specify texture coordinates
+	glBegin (GL_QUADS);
+	    glTexCoord2f (0.0f,0.0f); // lower left corner
+	    glVertex3f(-1.0f, -0.9f, -1.f);
+	    glTexCoord2f (1.0f, 0.0f); // lower right corner
+	    glVertex3f(1.0f, -0.9f, -1.0f);
+	    glTexCoord2f (1.0f, 20.0f); // upper right corner
+	    glVertex3f(1.0f, -0.9f, 1.0f);
+	    glTexCoord2f (0.0f, 20.0f); // upper left corner
+	    glVertex3f(-1.0f, -0.9f, 1.0f);
+	glEnd ();
+
+	glDisable(GL_TEXTURE_2D); 
 	
 	//draw track
 	glColor4f(1.0f, 1.0f, 0.0f, 1.0f);
@@ -182,22 +204,58 @@ void display()
 		    glVertex3f(track[i][0]+(tWid*i), track[i][1]+rWid, track[i][2]);
 		glEnd();
 	    }
-	    */
+	    
 	    
 	    glBegin(GL_QUADS);
 		glVertex3f(track[i][0]-0.04f, track[i][1], track[i][2]-0.05f);
-		glVertex3f(track[j][0]-0.03f, track[j][1], track[j][2]-0.05f);
+		glVertex3f(track[j][0]-0.038f, track[j][1], track[j][2]-0.05f);
 		glVertex3f(track[j][0]+0.05f, track[j][1], track[j][2]+0.04f);
-		glVertex3f(track[i][0]+0.05f, track[i][1], track[i][2]+0.03f);
+		glVertex3f(track[i][0]+0.05f, track[i][1], track[i][2]+0.038f);
 	    glEnd();
 	    
 	    glBegin(GL_QUADS);
 		glVertex3f(track[i][0]-0.05f, track[i][1], track[i][2]-0.04f);
-		glVertex3f(track[j][0]-0.05f, track[j][1], track[j][2]-0.03f);
-		glVertex3f(track[j][0]+0.03f, track[j][1], track[j][2]+0.05f);
+		glVertex3f(track[j][0]-0.05f, track[j][1], track[j][2]-0.038f);
+		glVertex3f(track[j][0]+0.038f, track[j][1], track[j][2]+0.05f);
 		glVertex3f(track[i][0]+0.04f, track[i][1], track[i][2]+0.05f);
 	    glEnd();
+	    */
 	    
+	    /*
+	    glBegin(GL_QUADS);
+		glVertex3f(track[i][0]-0.05f, track[i][1], track[i][2]);
+		glVertex3f(track[j][0]-0.05f, track[j][1], track[j][2]);
+		glVertex3f(track[j][0]+0.05f, track[j][1], track[j][2]);
+		glVertex3f(track[i][0]+0.05f, track[i][1], track[i][2]);
+	    glEnd();
+	    */
+	    
+	    
+	    // enable texturing
+	    glEnable(GL_TEXTURE_2D); 
+	    
+	    //prep the texture
+	    glBindTexture(GL_TEXTURE_2D, g_track);
+	    
+	    //need to calculate track length
+	    float dx = track[i][0] - track[j][0];
+	    float dy = track[i][1] - track[j][1];
+	    float dz = track[i][2] - track[j][2];
+	    float dist = sqrt((dx*dx)+(dy*dy)+(dz*dz));
+	    dist = dist/10.0f;
+	    // specify texture coordinates
+	    glBegin (GL_QUADS);
+		glTexCoord2f (0.0f,0.0f); // lower left corner
+		glVertex3f(track[i][0]-0.05f, track[i][1], track[i][2]);
+		glTexCoord2f (1.0f, 0.0f); // lower right corner
+		glVertex3f(track[i][0]+0.05f, track[i][1], track[i][2]);
+		glTexCoord2f (1.0f, 1.0f*dist); // upper right corner
+		glVertex3f(track[j][0]+0.05f, track[j][1], track[j][2]);
+		glTexCoord2f (0.0f, 1.0f*dist); // upper left corner
+		glVertex3f(track[j][0]-0.05f, track[j][1], track[j][2]);
+	    glEnd ();
+
+	    glDisable(GL_TEXTURE_2D); 
 	}
 	
 	
@@ -283,8 +341,10 @@ void init()
     // turn on blending and set a blending function
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      
-	
+    
+    g_track = load_and_bind_texture("./track.png");
+    //make sure that the texture wraps
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
 int main(int argc, char* argv[])
