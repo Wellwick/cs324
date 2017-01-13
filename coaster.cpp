@@ -14,10 +14,67 @@
 #include "load_and_bind_texture.h"
 
 //create multi-dimensional array for the track
+float track[][3] = {{0.6, 0.8, -0.7},
+		   {0.3, 0.7, -0.65},
+		   {0.2, 0.6, -0.62},
+		   {-0.1, 0.65, -0.6},
+		   {-0.3, 0.75, -0.5},
+		   {-0.5, 0.78, -0.25},
+		   {-0.52, 0.73, -0.15},
+		   {-0.6, 0.65, -0.05},
+		   {-0.63, 0.35, 0.15},
+		   {-0.65, -0.15, 0.2},
+		   {-0.67, -0.5, 0.23},
+		   {-0.72, -0.63, 0.3},
+		   {-0.77, -0.69, 0.5},
+		   {-0.73, -0.72, 0.55},
+		   {-0.68, -0.75, 0.6},
+		   {-0.6, -0.76, 0.63},
+		   {-0.5, -0.74, 0.56},
+		   {-0.2, -0.6, 0.51},
+		   {0.05, -0.4, 0.47},
+		   {0.4, -0.2, 0.45},
+		   {0.5, -0.15, 0.4},
+		   {0.53, -0.18, 0.38},
+		   {0.57, -0.26, 0.32},
+		   {0.63, -0.36, 0.27},
+		   {0.69, -0.39, 0.29},
+		   {0.72, -0.36, 0.35},
+		   {0.69, -0.3, 0.42},
+		   {0.64, -0.2, 0.5},
+		   {0.53, -0.05, 0.58},
+		   {0.41, 0.2, 0.67},
+		   {0.3, 0.45, 0.74},
+		   {0.1, 0.6, 0.8},
+		   {0.02, 0.65, 0.82},
+		   {-0.1, 0.67, 0.74},
+		   {-0.2, 0.7, 0.69},
+		   {-0.35, 0.75, 0.61},
+		   {-0.42, 0.8, 0.48},
+		   {-0.38, 0.83, 0.36},
+		   {-0.26, 0.77, 0.18},
+		   {-0.1, 0.69, 0.15},
+		   {0.05, 0.55, 0.13},
+		   {0.1, 0.3, 0.12},
+		   {0.15, -0.05, 0.12},
+		   {0.19, -0.4, 0.1},
+		   {0.26, -0.6, 0.08},
+		   {0.31, -0.65, 0.03},
+		   {0.39, -0.65, -0.03},
+		   {0.43, -0.59, -0.16},
+		   {0.49, -0.5, -0.29},
+		   {0.59, -0.39, -0.42},
+		   {0.66, -0.25, -0.56},
+		   {0.71, 0.05, -0.65},
+		   {0.72, 0.5, -0.71},
+		   {0.68, 0.7, -0.73},
+		   {0.65, 0.8, -0.71}};
+/*
 float track[][3] = {{0.3, 0.5, 0.6},
 		   {-0.6, -0.2, 0.1},
 		   {-0.7, 0.4, 0.3},
 		   {0.2, 0.1, -0.7}};
+*/
 int trackCounter = 1; //counts which index in the track is next
 
 // properties of some material
@@ -150,24 +207,7 @@ void display()
 	glEnd();
 	
 	
-	// enable texturing
-	glEnable(GL_TEXTURE_2D); 
-	
-	//prep the texture
-	glBindTexture(GL_TEXTURE_2D, g_track);
-	// specify texture coordinates
-	glBegin (GL_QUADS);
-	    glTexCoord2f (0.0f,0.0f); // lower left corner
-	    glVertex3f(-1.0f, -0.9f, -1.f);
-	    glTexCoord2f (1.0f, 0.0f); // lower right corner
-	    glVertex3f(1.0f, -0.9f, -1.0f);
-	    glTexCoord2f (1.0f, 20.0f); // upper right corner
-	    glVertex3f(1.0f, -0.9f, 1.0f);
-	    glTexCoord2f (0.0f, 20.0f); // upper left corner
-	    glVertex3f(-1.0f, -0.9f, 1.0f);
-	glEnd ();
 
-	glDisable(GL_TEXTURE_2D); 
 	
 	//draw track
 	glColor4f(1.0f, 1.0f, 0.0f, 1.0f);
@@ -231,6 +271,7 @@ void display()
 	    */
 	    
 	    
+	    /*
 	    // enable texturing
 	    glEnable(GL_TEXTURE_2D); 
 	    
@@ -256,12 +297,13 @@ void display()
 	    glEnd ();
 
 	    glDisable(GL_TEXTURE_2D); 
+	    */
 	}
 	
 	
 	
-	glColor4f(1.0f, 0.0f, 0.0f, 1.0f);
-	/*
+	glColor4f(1.0f, 1.0f, 0.0f, 1.0f);
+	
 	glBegin(GL_LINE_LOOP);
 	    for (unsigned int i=0; i < sizeof(track)/sizeof(track[0]); i++) {
 		//need to figure out spot for left and right rail
@@ -271,7 +313,6 @@ void display()
 		glVertex3f(track[i][0], track[i][1], track[i][2]);
 	    }
 	glEnd();
-	*/
 	
 	//draw the cart
 	glColor4f(0.0f, 0.0f, 1.0f, 1.0f);
@@ -334,17 +375,18 @@ void init()
 
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
-
-    glEnable(GL_DEPTH_TEST);
-    glShadeModel(GL_SMOOTH); 
-
-    // turn on blending and set a blending function
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     g_track = load_and_bind_texture("./track.png");
+    
     //make sure that the texture wraps
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    
+    GLenum error = glGetError();
+    if (error!=GL_NO_ERROR)
+	fprintf(stderr, "GL error %s\n", gluErrorString(error));
+
+    glEnable(GL_DEPTH_TEST);
+    glShadeModel(GL_SMOOTH);
 }
 
 int main(int argc, char* argv[])
@@ -356,7 +398,7 @@ int main(int argc, char* argv[])
     glutInitWindowSize(512, 512); 
     glutInitWindowPosition(50, 50); 
 
-    glutCreateWindow("Mixing Opaque and Transparent"); 
+    glutCreateWindow("Rollercoaster"); 
 
     glutKeyboardFunc(keyboard); 
     glutReshapeFunc(reshape); 
