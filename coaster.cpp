@@ -75,7 +75,8 @@ float track[][3] = {{0.3, 0.5, 0.6},
 		   {-0.7, 0.4, 0.3},
 		   {0.2, 0.1, -0.7}};
 */
-int trackCounter = 1; //counts which index in the track is next
+int trackCounter[] = {1, 1, 1}; //counts which index in the track is next
+int loopCount[] = {0, 0, 0};
 
 // properties of some material
 float mat_ambient[] = {0.05, 0.05, 0.05, 1.0};
@@ -83,10 +84,19 @@ float mat_diffuse[] = {0.75, 0.75, 0.75, 1.0};
 float mat_specular[] = {1.0, 1.0, 1.0, 1.0};
 float mat_shininess[] = {50.0};
 
-float pos[] = {track[0][0], track[0][1], track[0][2]};
-float dir[] = {(track[1][0] - pos[0])/50,
-	       (track[1][1] - pos[1])/50,
-	       (track[1][2] - pos[2])/50};
+//need 3 carts
+float pos[][3] = {{track[0][0], track[0][1], track[0][2]},
+		  {track[0][0], track[0][1], track[0][2]},
+		  {track[0][0], track[0][1], track[0][2]}};
+float dir[][3] = {{(track[1][0] - pos[0][0])/50,
+	       (track[1][1] - pos[0][1])/50,
+	       (track[1][2] - pos[0][2])/50},
+	       {(track[1][0] - pos[1][0])/50,
+	       (track[1][1] - pos[1][1])/50,
+	       (track[1][2] - pos[1][2])/50},
+	       {(track[1][0] - pos[2][0])/50,
+	       (track[1][1] - pos[2][1])/50,
+	       (track[1][2] - pos[2][2])/50}};
 float speed = 1.0f;
 
 bool g_moving = false;
@@ -94,61 +104,106 @@ bool g_coasting = false;
 
 unsigned int g_track = 0;
 
-void setNextTrack() {
-    trackCounter = (trackCounter + 1) % (sizeof(track)/sizeof(track[0]));
-    dir[0] = track[trackCounter][0] - pos[0];
-    dir[1] = track[trackCounter][1] - pos[1];
-    dir[2] = track[trackCounter][2] - pos[2];
+void setNextTrack(int i) {
+    trackCounter[i] = (trackCounter[i] + 1) % (sizeof(track)/sizeof(track[0]));
+    loopCount[i]++; //loop count ignores when things loop
+    dir[i][0] = track[trackCounter[i]][0] - pos[i][0];
+    dir[i][1] = track[trackCounter[i]][1] - pos[i][1];
+    dir[i][2] = track[trackCounter[i]][2] - pos[i][2];
     //normalise the direction
-    float absoluteVal = (dir[0]*dir[0]) + (dir[1]*dir[1]) + (dir[2]*dir[2]);
+    float absoluteVal = (dir[i][0]*dir[i][0]) + (dir[i][1]*dir[i][1]) + (dir[i][2]*dir[i][2]);
     absoluteVal = sqrt(absoluteVal);
     //scale to a fiftieth of the speed
-    dir[0] = dir[0]/(absoluteVal*50);
-    dir[1] = dir[1]/(absoluteVal*50);
-    dir[2] = dir[2]/(absoluteVal*50);
+    dir[i][0] = dir[i][0]/(absoluteVal*50);
+    dir[i][1] = dir[i][1]/(absoluteVal*50);
+    dir[i][2] = dir[i][2]/(absoluteVal*50);
     /*
     float speed = sqrt((dir[0]*dir[0]) + (dir[1]*dir[1]) + (dir[2]*dir[2]));
     std::cout << "Speed for next section will be " << speed << std::endl;
     */
 }
 
-void idle()
-{
-    usleep(100000);
-    //move the coaster
-    pos[0] += dir[0]*speed;
-    pos[1] += dir[1]*speed;
-    pos[2] += dir[2]*speed;
-    
-    //change speed based on how much we should accelerate
-    float dist = sqrt((dir[0]*dir[0]) + (dir[2]*dir[2]));
-    float angle = atan(dir[1]/dist);
-    float acceleration = (-sin(angle)*9.81)/60; 
-    if (angle < 0.0f) acceleration - 0.05f;
-    speed += acceleration;
-    if (speed < 1.0f) speed = 1.0f; //always maintain minimum speed
-    //std::cout << "Speed is currently " << speed << std::endl;
-    
+//method to check whether we are on to a new track position
+void checkTrackPos(int i) {
     //make sure we haven't overshot the destination
-    float tmp[] = {pos[0]+dir[0], pos[1]+dir[1], pos[2]+dir[2]};
+    float tmp[] = {pos[i][0]+dir[i][0], pos[i][1]+dir[i][1], pos[i][2]+dir[i][2]};
     //calculate square of distance to next track point
-    float dx = pos[0] - track[trackCounter][0];
-    float dy = pos[1] - track[trackCounter][1];
-    float dz = pos[2] - track[trackCounter][2];
+    float dx = pos[i][0] - track[trackCounter[i]][0];
+    float dy = pos[i][1] - track[trackCounter[i]][1];
+    float dz = pos[i][2] - track[trackCounter[i]][2];
     float calcNow = (dx*dx) + (dy*dy) + (dz*dz);
     
     //calculate what it will be by next tick
-    dx = tmp[0] - track[trackCounter][0];
-    dy = tmp[1] - track[trackCounter][1];
-    dz = tmp[2] - track[trackCounter][2];
+    dx = tmp[0] - track[trackCounter[i]][0];
+    dy = tmp[1] - track[trackCounter[i]][1];
+    dz = tmp[2] - track[trackCounter[i]][2];
     float calcNext = (dx*dx) + (dy*dy) + (dz*dz);
     
     //if we are going to be further away, just snap to the next point
     if (calcNext > calcNow) {
-	pos[0] = track[trackCounter][0];
-	pos[1] = track[trackCounter][1];
-	pos[2] = track[trackCounter][2];
-	setNextTrack();
+	pos[i][0] = track[trackCounter[i]][0];
+	pos[i][1] = track[trackCounter[i]][1];
+	pos[i][2] = track[trackCounter[i]][2];
+	setNextTrack(i);
+    }
+}
+
+//method to move forward the index specified cart
+void moveCart(int i) {
+    pos[i][0] += dir[i][0]*speed;
+    pos[i][1] += dir[i][1]*speed;
+    pos[i][2] += dir[i][2]*speed;
+    
+    if (i == 0) {
+	//change speed based on how much we should accelerate
+	float dist = sqrt((dir[i][0]*dir[i][0]) + (dir[i][2]*dir[i][2]));
+	float angle = atan(dir[i][1]/dist);
+	float acceleration = (-sin(angle)*9.81)/60; 
+	if (angle < 0.0f) acceleration - 0.05f;
+	speed += acceleration;
+	if (speed < 1.0f) speed = 1.0f; //always maintain minimum speed
+	//std::cout << "Speed is currently " << speed << std::endl;
+	
+    }
+    
+}
+
+void idle()
+{
+    usleep(100000);
+    //move the coaster
+    for (int i=0; i<sizeof(pos)/sizeof(pos[0]); i++) {
+	moveCart(i);
+	
+	//make sure that the carts aren't too far apart and speed them up if they are
+	//slow them down if they are too close
+	float dx = pos[i][0] - pos[i+1][0];
+	float dy = pos[i][1] - pos[i+1][1];
+	float dz = pos[i][2] - pos[i+1][2];
+	float dist =  sqrt((dx*dx)+(dy*dy)+(dz*dz));
+	
+	if (dist < 0.1f) {
+	    //need to shift this one back a lot
+	    pos[i+1][0] -= dir[i+1][0]*speed*3;
+	    pos[i+1][1] -= dir[i+1][1]*speed*3;
+	    pos[i+1][2] -= dir[i+1][2]*speed*3;
+	} else if (dist < 0.2f) {
+	    //need to shift this one back a bit
+	    pos[i+1][0] -= dir[i+1][0]*speed*(2/3);
+	    pos[i+1][1] -= dir[i+1][1]*speed*(2/3);
+	    pos[i+1][2] -= dir[i+1][2]*speed*(2/3);
+	} else if (dist > 0.4f) {
+	    //need to shift this one forward a bit
+	    pos[i+1][0] += dir[i+1][0]*speed;
+	    pos[i+1][1] += dir[i+1][1]*speed;
+	    pos[i+1][2] += dir[i+1][2]*speed;
+	} else if (dist > 0.2f) {
+	    //need to shift this one forward a bit
+	    pos[i+1][0] += dir[i+1][0]*speed*(1/3);
+	    pos[i+1][1] += dir[i+1][1]*speed*(1/3);
+	    pos[i+1][2] += dir[i+1][2]*speed*(1/3);
+	}
+	checkTrackPos(i);
     }
     
     glutPostRedisplay();
@@ -162,8 +217,8 @@ void display()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     if (g_coasting) {
-	gluLookAt(pos[0], pos[1]+0.2f, pos[2], // eye position
-		  pos[0]+dir[0], pos[1]+0.2f+dir[1], pos[2]+dir[2], // reference point
+	gluLookAt(pos[0][0], pos[0][1]+0.2f, pos[0][2], // eye position
+		  pos[0][0]+dir[0][0], pos[0][1]+0.2f+dir[0][1], pos[0][2]+dir[0][2], // reference point
 		  0, 1, 0  // up vector
 		);
     } else {
@@ -316,11 +371,13 @@ void display()
 	
 	//draw the cart
 	glColor4f(0.0f, 0.0f, 1.0f, 1.0f);
-	glBegin(GL_LINE_LOOP);
-	    glVertex3f(pos[0]+0.02f, pos[1]+0.02f, pos[2]);
-	    glVertex3f(pos[0]-0.02f, pos[1], pos[2]-0.02f);
-	    glVertex3f(pos[0], pos[1]-0.02f, pos[2]+0.02f);
-	glEnd();
+	for (int i=0; i<sizeof(pos)/sizeof(pos[0]); i++) {
+	    glBegin(GL_LINE_LOOP);
+		glVertex3f(pos[i][0]+0.02f, pos[i][1]+0.02f, pos[i][2]);
+		glVertex3f(pos[i][0]-0.02f, pos[i][1], pos[i][2]-0.02f);
+		glVertex3f(pos[i][0], pos[i][1]-0.02f, pos[i][2]+0.02f);
+	    glEnd();
+	}
 	
 	
 	
@@ -330,15 +387,45 @@ void display()
     glutSwapBuffers(); 
 }
 
+//spaces the carts out so that reversing doesn't occur
+void spaceCarts() {
+    for (int i=(sizeof(pos)/sizeof(pos[0]))-1; i>-1; i--) {
+	
+	//make sure that the carts aren't too far apart and speed them up if they are
+	//slow them down if they are too close
+	float dx = pos[i][0] - pos[i-1][0];
+	float dy = pos[i][1] - pos[i-1][1];
+	float dz = pos[i][2] - pos[i-1][2];
+	float dist =  sqrt((dx*dx)+(dy*dy)+(dz*dz));
+	
+	while (dist < 0.2f) {
+	    //need to move all carts in front of this one forward
+	    //has to move front one last, since that is the one that informs speed
+	    for (int j=i-1; j>-1; j--) {
+		moveCart(j);
+		checkTrackPos(j);
+	    }
+	    dx = pos[i][0] - pos[i-1][0];
+	    dy = pos[i][1] - pos[i-1][1];
+	    dz = pos[i][2] - pos[i-1][2];
+	    dist =  sqrt((dx*dx)+(dy*dy)+(dz*dz));
+	}
+    }
+}
+
 void keyboard(unsigned char key, int, int)
 {
     switch (key)
     {
 	case 'q': exit(1); break;
-	case 'p': pos[0] = track[trackCounter][0];
-		  pos[1] = track[trackCounter][1];
-		  pos[2] = track[trackCounter][2];
-		  setNextTrack();
+	case 'p': for (int i=0; i<sizeof(pos)/sizeof(pos[0]); i++) {
+		      pos[i][0] = track[trackCounter[0]][0];
+		      pos[i][1] = track[trackCounter[0]][1];
+		      pos[i][2] = track[trackCounter[0]][2];
+		      setNextTrack(i);
+		  }
+		  //when positioned, space the carts out
+		  spaceCarts();
 		  glutPostRedisplay();
 		  break;
 
@@ -387,6 +474,9 @@ void init()
 
     glEnable(GL_DEPTH_TEST);
     glShadeModel(GL_SMOOTH);
+    
+    //make sure the carts are seperated first
+    spaceCarts();
 }
 
 int main(int argc, char* argv[])
