@@ -70,6 +70,10 @@ float track[][3] = {{0.6, 0.8, -0.7},
 		   {0.68, 0.7, -0.73},
 		   {0.65, 0.8, -0.71}};
 
+//array for perpendicular plain to lay the track on, only needs z, x
+float perpTrack[sizeof(track)/sizeof(track[0])][2];
+float upVector[sizeof(track)/sizeof(track[0])][3];
+
 int trackCounter[] = {1, 1, 1}; //counts which index in the track is next
 int loopCount[] = {0, 0, 0};
 
@@ -212,9 +216,15 @@ void display()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     if (g_coasting) {
-	gluLookAt(pos[0][0], pos[0][1], pos[0][2], // eye position
-		  pos[0][0]+dir[0][0], pos[0][1]+dir[0][1], pos[0][2]+dir[0][2], // reference point
-		  0, 1, 0  // up vector
+	gluLookAt(pos[0][0],
+		  pos[0][1] + 0.01f, 
+		  pos[0][2], // eye position
+		  pos[0][0] + dir[0][0],
+		  pos[0][1] + 0.01f + dir[0][1],
+		  pos[0][2] + dir[0][2], // reference point
+		  0,
+		  1,
+		  0 //up vector
 		);
     } else {
 	gluLookAt(1, 1, 3, // eye position
@@ -316,7 +326,6 @@ void display()
 	    glVertex3f(0.8f, -0.9f, 1.0f);
 	glEnd();
 	
-	glColor4f(1.0f, 1.0f, 0.0f, 1.0f);
 	
 	for (int i=0; i<sizeof(track)/sizeof(track[0]); i++) {
 	    int j = (i+1)%(sizeof(track)/sizeof(track[0]));
@@ -329,32 +338,41 @@ void display()
 	    dy = dy/dist;
 	    dz = dz/dist;
 	    
-	    
-	    //calculate perpendicular vector using dot product and unit vector
-	    float px = 1.0f / (1.0f - (dx/dz));
-	    float py = 0.0f;
-	    float pz = 1.0f - px;
-	    float pDist = sqrt((px*px)+(pz*pz));
-	    
-	    px = px/pDist;
-	    pz = px/pDist;
-	    
 	    float cD = 0.0f; //for completed distance
+		
+	    float px = perpTrack[i][0];
+	    float pz = perpTrack[i][1];
 	    
 	    while (dist > cD + 0.005f) {
 		//lay down one rail and continue along the path
 		float x = track[i][0] + (dx*cD);
 		float y = track[i][1] + (dy*cD);
 		float z = track[i][2] + (dz*cD);
+		//need to fix rail width
+		//make the track brown
+		glColor4f(0.207f, 0.2f, 0.063f, 1.0f);
 		glBegin(GL_QUADS);
 		    glVertex3f(x+(px*0.01f), y, z+(pz*0.01f));
-		    glVertex3f(x+(px*0.01f)+(dx*0.002f), y, z+(pz*0.01f)+(dz*0.002f));
-		    glVertex3f(x+(px*-0.01f)+(dx*0.002f), y, z+(pz*-0.01f)+(dz*0.002f));
+		    glVertex3f(x+(px*0.01f)+(dx*0.004f), y+(dy*0.004f), z+(pz*0.01f)+(dz*0.004f));
+		    glVertex3f(x+(px*-0.01f)+(dx*0.004f), y+(dy*0.004f), z+(pz*-0.01f)+(dz*0.004f));
 		    glVertex3f(x+(px*-0.01f), y, z+(pz*-0.01f));
 		glEnd();
 		cD += 0.01f;
 	    }
 	    
+	    float x = track[i][0];
+	    float y = track[i][1];
+	    float z = track[i][2];
+	    glColor4f(0.0f, 0.0f, 0.0f, 1.0f);
+	    for (int i=-1; i<3; i+=2) {
+		//need a left and right rail
+		glBegin(GL_QUADS);
+		    glVertex3f(x+(px*0.006f*i), y, z+(pz*0.006f*i));
+		    glVertex3f(x+(px*0.0075f*i), y, z+(pz*0.0075f*i));
+		    glVertex3f(x+(px*0.0075f*i)+(dx*dist), y+(dy*dist), z+(pz*0.0075f*i)+(dz*dist));
+		    glVertex3f(x+(px*0.006f*i)+(dx*dist), y+(dy*dist), z+(pz*0.006f*i)+(dz*dist));
+		glEnd();
+	    }
 	}
 	
 	/*
@@ -441,9 +459,59 @@ void reshape(int w, int h)
     glViewport(0, 0, w, h); 
     glMatrixMode(GL_PROJECTION); 
     glLoadIdentity();
-    gluPerspective(40.0, 1.0f, 0.1, 5.0);
+    gluPerspective(40.0, 1.0f, 0.025, 5.0);
 
     glutPostRedisplay();
+}
+
+//calculates the perpendicular track plane
+void calcPerpTrack() {
+    for (int i=0; i<sizeof(track)/sizeof(track[0]); i++) {
+	int j = (i+1)%(sizeof(track)/sizeof(track[0]));
+	float dx = track[j][0]-track[i][0];
+	float dy = track[j][1]-track[i][1];
+	float dz = track[j][2]-track[i][2];
+	float dist = sqrt((dx*dx)+(dy*dy)+(dz*dz));
+	//convert to unit vector
+	dx = dx/dist;
+	dz = dz/dist;
+	
+	
+	//calculate perpendicular vector using dot product and unit vector
+	perpTrack[i][0] = 1.0f / sqrt(1.0f + ((dx*dx)/(dz*dz)));
+	//no y vector needed
+	perpTrack[i][1] = sqrt(1.0f - (perpTrack[i][0]*perpTrack[i][1]));
+    }
+}
+
+//calculates the up vector for each track
+void calcUpVectors() {
+    for (int i=0; i<sizeof(track)/sizeof(track[0]); i++) {
+	//takes both plains into account and builds a perpendicular vector
+	int j = (i+1)%(sizeof(track)/sizeof(track[0]));
+	float dx = track[j][0]-track[i][0];
+	float dy = track[j][1]-track[i][1];
+	float dz = track[j][2]-track[i][2];
+	float dist = sqrt((dx*dx)+(dy*dy)+(dz*dz));
+	//convert to unit vector
+	dx = dx/dist;
+	dy = dy/dist;
+	dz = dz/dist;
+	
+	float px = perpTrack[i][0];
+	float py = 0.0f;
+	float pz = perpTrack[i][0];
+	
+	//this is the product normal of the two vectors
+	float perpX = (dy*pz) - (dz*py);
+	float perpY = (dz*px) - (dx*pz);
+	float perpZ = (dx*py) - (dy*px);
+	dist = sqrt((perpX*perpX)+(perpY*perpY)+(perpZ*perpZ));
+	
+	upVector[i][0] = perpX / dist;
+	upVector[i][1] = perpY / dist;
+	upVector[i][2] = perpZ / dist;
+    }
 }
 
 void init()
@@ -473,6 +541,8 @@ void init()
     
     //make sure the carts are seperated first
     spaceCarts();
+    calcPerpTrack();
+    calcUpVectors();
 }
 
 int main(int argc, char* argv[])
