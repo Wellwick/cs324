@@ -72,6 +72,7 @@ float track[][3] = {{0.6, 0.8, -0.7},
 //array for perpendicular plain to lay the track on, only needs z, x
 float perpTrack[sizeof(track)/sizeof(track[0])][2];
 float upVector[sizeof(track)/sizeof(track[0])][3];
+bool hasMesh[sizeof(track)/sizeof(track[0])];
 
 int static STARTING_TRACK = 0;
 
@@ -87,16 +88,16 @@ float dir[sizeof(pos)/sizeof(pos[0])][3];
 float speed = 1.0f;
 
 int trackCounter[sizeof(pos)/sizeof(pos[0])]; //counts which index in the track is next
-//int loopCount[sizeof(pos)/sizeof(pos[0])];
+
 
 bool g_moving = false;
 bool g_coasting = false;
 bool g_normals = false;
 bool g_carts = true;
+bool g_mesh = true;
 
 void setNextTrack(int i) {
     trackCounter[i] = (trackCounter[i] + 1) % (sizeof(track)/sizeof(track[0]));
-    //loopCount[i]++; //loop count ignores when things loop, currently unused
     dir[i][0] = track[trackCounter[i]][0] - pos[i][0];
     dir[i][1] = track[trackCounter[i]][1] - pos[i][1];
     dir[i][2] = track[trackCounter[i]][2] - pos[i][2];
@@ -191,7 +192,6 @@ void initialiseCarts() {
 	pos[i][1] = track[STARTING_TRACK][1];
 	pos[i][2] = track[STARTING_TRACK][2];
 	trackCounter[i] = STARTING_TRACK;
-	//loopCount[i] = 0;
 	setNextTrack(i);
     }
 }
@@ -359,7 +359,7 @@ void display()
 	    glVertex3f(0.8f, -0.9f, 1.0f);
 	glEnd();
 	
-	//drawTracks
+	//draw tracks
 	for (int i=0; i<sizeof(track)/sizeof(track[0]); i++) {
 	    int j = (i+1)%(sizeof(track)/sizeof(track[0]));
 	    float dx = track[j][0]-track[i][0];
@@ -390,7 +390,6 @@ void display()
 		    glVertex3f(x+(px*-0.01f)+(dx*0.004f), y+(dy*0.004f), z+(pz*-0.01f)+(dz*0.004f));
 		    glVertex3f(x+(px*-0.01f), y, z+(pz*-0.01f));
 		glEnd();
-		cD += 0.01f;
 		//check if the request is made to draw the surface normals
 		if (g_normals) {
 		    //every few rail, draw the up vector
@@ -404,6 +403,51 @@ void display()
 			glEnd();
 		    }
 		}
+		if (g_mesh && hasMesh[i]) {
+		    //std::cout << i << " has a mesh" << std::endl;
+		    glColor4f(0.6f, 0.3f, 0.3f, 1.0f);
+		    if ((int)(cD*100) % 2 == 0) {
+			float tmpX = x+(px*0.008f);
+			float tmpY = y;
+			float tmpZ = z+(pz*0.008f);
+			float depth = 0.0f;
+			while (y - depth > -1.0f) {
+			    //reset the vals
+			    tmpX = x-(px*0.008f);
+			    tmpY = y-depth;
+			    tmpZ = z-(pz*0.008f);
+			    
+			    glBegin(GL_LINE_STRIP);
+				glVertex3f(tmpX, tmpY, tmpZ);
+				//while (tmpY > -1.0f) {
+				    tmpX += dx*(dist-cD);
+				    tmpY -= (dist-cD);
+				    tmpZ += dz*(dist-cD);
+				    glVertex3f(tmpX, tmpY, tmpZ);
+				    tmpX -= dx*(dist-cD);
+				    tmpY -= (dist-cD);
+				    tmpZ -= dz*(dist-cD);
+				    glVertex3f(tmpX, tmpY, tmpZ);
+				//}
+			    glEnd();
+			    if (cD == 0.0f) depth += 0.05f;
+			    else depth = y + 1.2f;
+			}
+			
+			//now do other side
+			tmpX = x-(px*0.008f);
+			tmpY = y;
+			tmpZ = z-(pz*0.008f);
+			glBegin(GL_LINES);
+			    glVertex3f(tmpX, tmpY, tmpZ);
+			    tmpX += dx*(dist-cD);
+			    tmpY -= dist-cD;
+			    tmpZ += dz*(dist-cD);
+			    glVertex3f(tmpX, tmpY, tmpZ);
+			glEnd();
+		    }
+		}
+		cD += 0.01f;
 	    }
 	    
 	    float x = track[i][0];
@@ -523,6 +567,8 @@ void keyboard(unsigned char key, int, int)
 		  break;
 	case 'n': g_normals = !g_normals;
 		  break;
+	case 'm': g_mesh = !g_mesh;
+		  break;
 	case 'd': g_carts = !g_carts;
 		  break;
 	case 'z': g_coasting = !g_coasting;
@@ -558,6 +604,10 @@ void calcPerpTrack() {
 	perpTrack[i][0] = 1.0f / sqrt(1.0f + ((dx*dx)/(dz*dz)));
 	//no y vector needed
 	perpTrack[i][1] = sqrt(1.0f - (perpTrack[i][0]*perpTrack[i][0]));
+	
+	//also notify for mesh
+	//only one in example track which shouldn't have mesh
+	hasMesh[i] = (i!=35);
     }
 }
 
