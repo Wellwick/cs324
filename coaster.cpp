@@ -87,7 +87,7 @@ float dir[sizeof(pos)/sizeof(pos[0])][3];
 float speed = 1.0f;
 
 int trackCounter[sizeof(pos)/sizeof(pos[0])]; //counts which index in the track is next
-int loopCount[sizeof(pos)/sizeof(pos[0])];
+//int loopCount[sizeof(pos)/sizeof(pos[0])];
 
 bool g_moving = false;
 bool g_coasting = false;
@@ -96,7 +96,7 @@ bool g_carts = true;
 
 void setNextTrack(int i) {
     trackCounter[i] = (trackCounter[i] + 1) % (sizeof(track)/sizeof(track[0]));
-    loopCount[i]++; //loop count ignores when things loop, currently unused
+    //loopCount[i]++; //loop count ignores when things loop, currently unused
     dir[i][0] = track[trackCounter[i]][0] - pos[i][0];
     dir[i][1] = track[trackCounter[i]][1] - pos[i][1];
     dir[i][2] = track[trackCounter[i]][2] - pos[i][2];
@@ -191,7 +191,7 @@ void initialiseCarts() {
 	pos[i][1] = track[STARTING_TRACK][1];
 	pos[i][2] = track[STARTING_TRACK][2];
 	trackCounter[i] = STARTING_TRACK;
-	loopCount[i] = 0;
+	//loopCount[i] = 0;
 	setNextTrack(i);
     }
 }
@@ -245,15 +245,19 @@ void display()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     if (g_coasting) {
-	gluLookAt(pos[0][0],
-		  pos[0][1] + 0.01f, 
-		  pos[0][2], // eye position
-		  pos[0][0] + dir[0][0],
-		  pos[0][1] + 0.01f + dir[0][1],
-		  pos[0][2] + dir[0][2], // reference point
-		  0,
-		  1,
-		  0 //up vector
+	int count = (trackCounter[0]-1)%(sizeof(track)/sizeof(track[0]));
+	float ux = upVector[count][0]*0.01f;
+	float uy = upVector[count][1]*0.01f;
+	float uz = upVector[count][2]*0.01f;
+	gluLookAt(pos[0][0] + ux,
+		  pos[0][1] + uy, 
+		  pos[0][2] + uz, // eye position
+		  pos[0][0] + ux + dir[0][0],
+		  pos[0][1] + uy + dir[0][1],
+		  pos[0][2] + uz + dir[0][2], // reference point
+		  ux,
+		  uy,
+		  uz //up vector
 		);
     } else {
 	gluLookAt(1, 1, 3, // eye position
@@ -355,7 +359,7 @@ void display()
 	    glVertex3f(0.8f, -0.9f, 1.0f);
 	glEnd();
 	
-	
+	//drawTracks
 	for (int i=0; i<sizeof(track)/sizeof(track[0]); i++) {
 	    int j = (i+1)%(sizeof(track)/sizeof(track[0]));
 	    float dx = track[j][0]-track[i][0];
@@ -418,39 +422,72 @@ void display()
 	}
 	if (g_carts) {
 	    //draw the cart
-	    glColor4f(0.8f, 0.8f, 0.8f, 1.0f);
 	    for (int i=0; i<sizeof(pos)/sizeof(pos[0]); i++) {
 		//prep trackcounter
 		int count = (trackCounter[i] - 1) % (sizeof(track)/sizeof(track[0]));
 		//prepare width data
-		float dx = perpTrack[count][0];
-		float dy = perpTrack[count][1];
-		float dz = perpTrack[count][2];
+		float dx = perpTrack[count][0]*0.02f;
+		float dy = 0.0f;
+		float dz = perpTrack[count][1]*0.02f;
 		
 		//prepare depth data
-		float px = dir[i][0] * 3.0f;
-		float py = dir[i][1] * 3.0f;
-		float pz = dir[i][2] * 3.0f;
+		float px = dir[i][0] * 2.2f;
+		float py = dir[i][1] * 2.2f;
+		float pz = dir[i][2] * 2.2f;
 		
 		//prepare height data
-		float hx = upVector[count][0];
-		float hy = upVector[count][1];
-		float hz = upVector[count][2];
+		float hx = upVector[count][0]*0.0075f;
+		float hy = upVector[count][1]*0.0075f;
+		float hz = upVector[count][2]*0.0075f;
+		
+		glColor4f(0.8f, 0.8f, 0.8f, 1.0f);
 		
 		//bottom of cart
 		glBegin(GL_QUADS);
-		    glVertex3f(pos[i][0]+(dx*0.02f),
+		    glVertex3f(pos[i][0]+dx,
 				pos[i][1], 
-				pos[i][2]+(dz*0.02f));
-		    glVertex3f(pos[i][0]+(dx*0.02f)+px,
+				pos[i][2]+dz);
+		    glVertex3f(pos[i][0]+dx+px,
 				pos[i][1]+py, 
-				pos[i][2]+(dz*0.02f)+pz);
-		    glVertex3f(pos[i][0]-(dx*0.02f)+px, 
+				pos[i][2]+dz+pz);
+		    glVertex3f(pos[i][0]-dx+px, 
 				pos[i][1]+py, 
-				pos[i][2]-(dz*0.02f)+pz);
-		    glVertex3f(pos[i][0]-(dx*0.02f), 
+				pos[i][2]-dz+pz);
+		    glVertex3f(pos[i][0]-dx, 
 				pos[i][1], 
-				pos[i][2]-(dz*0.02f));
+				pos[i][2]-dz);
+		glEnd();
+		
+		glColor4f(0.6f, 0.6f, 0.6f, 1.0f);
+		
+		//sides of cart
+		glBegin(GL_QUADS);
+		    glVertex3f(pos[i][0]+dx,
+				pos[i][1], 
+				pos[i][2]+dz);
+		    glVertex3f(pos[i][0]+dx+px,
+				pos[i][1]+py, 
+				pos[i][2]+dz+pz);
+		    glVertex3f(pos[i][0]+dx+px+hx, 
+				pos[i][1]+py+hy, 
+				pos[i][2]+dz+pz+hz);
+		    glVertex3f(pos[i][0]+dx+hx, 
+				pos[i][1]+hy, 
+				pos[i][2]+dz+hz);
+		glEnd();
+		glBegin(GL_QUADS);
+		    glVertex3f(pos[i][0]-dx,
+				pos[i][1], 
+				pos[i][2]-dz);
+		    glVertex3f(pos[i][0]-dx+px,
+				pos[i][1]+py, 
+				pos[i][2]-dz+pz);
+		    glVertex3f(pos[i][0]-dx+px+hx, 
+				pos[i][1]+py+hy, 
+				pos[i][2]-dz+pz+hz);
+		    glVertex3f(pos[i][0]-dx+hx, 
+				pos[i][1]+hy, 
+				pos[i][2]-dz+hz);
 		glEnd();
 		
 	    }
@@ -520,7 +557,7 @@ void calcPerpTrack() {
 	//calculate perpendicular vector using dot product and unit vector
 	perpTrack[i][0] = 1.0f / sqrt(1.0f + ((dx*dx)/(dz*dz)));
 	//no y vector needed
-	perpTrack[i][1] = sqrt(1.0f - (perpTrack[i][0]*perpTrack[i][1]));
+	perpTrack[i][1] = sqrt(1.0f - (perpTrack[i][0]*perpTrack[i][0]));
     }
 }
 
@@ -540,7 +577,7 @@ void calcUpVectors() {
 	
 	float px = perpTrack[i][0];
 	float py = 0.0f;
-	float pz = perpTrack[i][0];
+	float pz = perpTrack[i][1];
 	
 	//this is the product normal of the two vectors
 	float perpX = (dy*pz) - (dz*py);
