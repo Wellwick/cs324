@@ -74,7 +74,7 @@ float track[][3] = {{0.6, 0.8, -0.7},
 float perpTrack[sizeof(track)/sizeof(track[0])][2];
 float upVector[sizeof(track)/sizeof(track[0])][3];
 
-int trackCounter[] = {1, 1, 1}; //counts which index in the track is next
+int trackCounter[] = {0, 0, 0}; //counts which index in the track is next
 int loopCount[] = {0, 0, 0};
 
 // properties of some material
@@ -87,15 +87,7 @@ float mat_shininess[] = {50.0};
 float pos[][3] = {{track[0][0], track[0][1], track[0][2]},
 		  {track[0][0], track[0][1], track[0][2]},
 		  {track[0][0], track[0][1], track[0][2]}};
-float dir[][3] = {{(track[1][0] - pos[0][0])/50,
-	       (track[1][1] - pos[0][1])/50,
-	       (track[1][2] - pos[0][2])/50},
-	       {(track[1][0] - pos[1][0])/50,
-	       (track[1][1] - pos[1][1])/50,
-	       (track[1][2] - pos[1][2])/50},
-	       {(track[1][0] - pos[2][0])/50,
-	       (track[1][1] - pos[2][1])/50,
-	       (track[1][2] - pos[2][2])/50}};
+float dir[sizeof(pos)/sizeof(pos[0])][3];
 float speed = 1.0f;
 
 bool g_moving = false;
@@ -120,6 +112,13 @@ void setNextTrack(int i) {
     float speed = sqrt((dir[0]*dir[0]) + (dir[1]*dir[1]) + (dir[2]*dir[2]));
     std::cout << "Speed for next section will be " << speed << std::endl;
     */
+}
+
+//initialise the direction for the carts
+void initialDirection() {
+    for (int i=0; i<sizeof(pos)/sizeof(pos[0]); i++) {
+	setNextTrack(i);
+    }
 }
 
 //method to check whether we are on to a new track position
@@ -374,24 +373,55 @@ void display()
 		glEnd();
 	    }
 	}
-	
-	/*
-	glBegin(GL_LINE_LOOP);
-	    for (unsigned int i=0; i < sizeof(track)/sizeof(track[0]); i++) {
-		//need to figure out spot for left and right rail
-		//just shifting along the x dimension
-		
-		glVertex3f(track[i][0], track[i][1], track[i][2]);
-	    }
-	glEnd();
-	*/
 	//draw the cart
-	glColor4f(0.0f, 0.0f, 1.0f, 1.0f);
+	glColor4f(0.8f, 0.8f, 0.8f, 1.0f);
 	for (int i=0; i<sizeof(pos)/sizeof(pos[0]); i++) {
-	    glBegin(GL_LINE_LOOP);
-		glVertex3f(pos[i][0]+0.02f, pos[i][1]+0.02f, pos[i][2]);
-		glVertex3f(pos[i][0]-0.02f, pos[i][1], pos[i][2]-0.02f);
-		glVertex3f(pos[i][0], pos[i][1]-0.02f, pos[i][2]+0.02f);
+	    //prep trackcounter
+	    int count = (trackCounter[i] - 1) % (sizeof(track)/sizeof(track[0]));
+	    //prepare width data
+	    float dx = perpTrack[count][0];
+	    float dy = perpTrack[count][1];
+	    float dz = perpTrack[count][2];
+	    
+	    //prepare depth data
+	    float px = dir[i][0] * 3.0f;
+	    float py = dir[i][1] * 3.0f;
+	    float pz = dir[i][2] * 3.0f;
+	    
+	    //prepare height data
+	    float hx = upVector[count][0];
+	    float hy = upVector[count][1];
+	    float hz = upVector[count][2];
+	    
+	    //bottom of cart
+	    glBegin(GL_QUADS);
+		glVertex3f(pos[i][0]+(dx*0.02f),
+			    pos[i][1], 
+			    pos[i][2]+(dz*0.02f));
+		glVertex3f(pos[i][0]+(dx*0.02f)+px,
+			    pos[i][1]+py, 
+			    pos[i][2]+(dz*0.02f)+pz);
+		glVertex3f(pos[i][0]-(dx*0.02f)+px, 
+			    pos[i][1]+py, 
+			    pos[i][2]-(dz*0.02f)+pz);
+		glVertex3f(pos[i][0]-(dx*0.02f), 
+			    pos[i][1], 
+			    pos[i][2]-(dz*0.02f));
+	    glEnd();
+	    
+	    glBegin(GL_QUADS);
+		glVertex3f(pos[i][0]+(dx*0.02f)+px,
+			    pos[i][1]+py, 
+			    pos[i][2]+(dz*0.02f)+pz);
+		glVertex3f(pos[i][0]+(dx*0.02f)+px,
+			    pos[i][1]+py+0.01f, 
+			    pos[i][2]+(dz*0.02f)+pz);
+		glVertex3f(pos[i][0]-(dx*0.02f)+px,
+			    pos[i][1]+py+0.01f, 
+			    pos[i][2]-(dz*0.02f)+pz);
+		glVertex3f(pos[i][0]-(dx*0.02f)+px,
+			    pos[i][1]+py, 
+			    pos[i][2]-(dz*0.02f)+pz);
 	    glEnd();
 	}
 	
@@ -540,6 +570,7 @@ void init()
     glShadeModel(GL_SMOOTH);
     
     //make sure the carts are seperated first
+    initialDirection();
     spaceCarts();
     calcPerpTrack();
     calcUpVectors();
