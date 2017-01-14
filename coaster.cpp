@@ -92,6 +92,8 @@ float speed = 1.0f;
 
 bool g_moving = false;
 bool g_coasting = false;
+bool g_normals = false;
+bool g_carts = true;
 
 unsigned int g_track = 0;
 
@@ -357,6 +359,19 @@ void display()
 		    glVertex3f(x+(px*-0.01f), y, z+(pz*-0.01f));
 		glEnd();
 		cD += 0.01f;
+		//check if the request is made to draw the surface normals
+		if (g_normals) {
+		    //every few rail, draw the up vector
+		    glColor4f(1.0f, 0.0f, 1.0f, 1.0f);
+		    if ((int)(cD*100) % 3 == 0) {
+			glBegin(GL_LINES);
+			    glVertex3f(x, y, z);
+			    glVertex3f(x+(upVector[i][0]*0.03f),
+				      y+(upVector[i][1]*0.03f),
+				      z+(upVector[i][2]*0.03f));
+			glEnd();
+		    }
+		}
 	    }
 	    
 	    float x = track[i][0];
@@ -373,56 +388,59 @@ void display()
 		glEnd();
 	    }
 	}
-	//draw the cart
-	glColor4f(0.8f, 0.8f, 0.8f, 1.0f);
-	for (int i=0; i<sizeof(pos)/sizeof(pos[0]); i++) {
-	    //prep trackcounter
-	    int count = (trackCounter[i] - 1) % (sizeof(track)/sizeof(track[0]));
-	    //prepare width data
-	    float dx = perpTrack[count][0];
-	    float dy = perpTrack[count][1];
-	    float dz = perpTrack[count][2];
-	    
-	    //prepare depth data
-	    float px = dir[i][0] * 3.0f;
-	    float py = dir[i][1] * 3.0f;
-	    float pz = dir[i][2] * 3.0f;
-	    
-	    //prepare height data
-	    float hx = upVector[count][0];
-	    float hy = upVector[count][1];
-	    float hz = upVector[count][2];
-	    
-	    //bottom of cart
-	    glBegin(GL_QUADS);
-		glVertex3f(pos[i][0]+(dx*0.02f),
-			    pos[i][1], 
-			    pos[i][2]+(dz*0.02f));
-		glVertex3f(pos[i][0]+(dx*0.02f)+px,
-			    pos[i][1]+py, 
-			    pos[i][2]+(dz*0.02f)+pz);
-		glVertex3f(pos[i][0]-(dx*0.02f)+px, 
-			    pos[i][1]+py, 
-			    pos[i][2]-(dz*0.02f)+pz);
-		glVertex3f(pos[i][0]-(dx*0.02f), 
-			    pos[i][1], 
-			    pos[i][2]-(dz*0.02f));
-	    glEnd();
-	    
-	    glBegin(GL_QUADS);
-		glVertex3f(pos[i][0]+(dx*0.02f)+px,
-			    pos[i][1]+py, 
-			    pos[i][2]+(dz*0.02f)+pz);
-		glVertex3f(pos[i][0]+(dx*0.02f)+px,
-			    pos[i][1]+py+0.01f, 
-			    pos[i][2]+(dz*0.02f)+pz);
-		glVertex3f(pos[i][0]-(dx*0.02f)+px,
-			    pos[i][1]+py+0.01f, 
-			    pos[i][2]-(dz*0.02f)+pz);
-		glVertex3f(pos[i][0]-(dx*0.02f)+px,
-			    pos[i][1]+py, 
-			    pos[i][2]-(dz*0.02f)+pz);
-	    glEnd();
+	if (g_carts) {
+	    //draw the cart
+	    glColor4f(0.8f, 0.8f, 0.8f, 1.0f);
+	    for (int i=0; i<sizeof(pos)/sizeof(pos[0]); i++) {
+		//prep trackcounter
+		int count = (trackCounter[i] - 1) % (sizeof(track)/sizeof(track[0]));
+		//prepare width data
+		float dx = perpTrack[count][0];
+		float dy = perpTrack[count][1];
+		float dz = perpTrack[count][2];
+		
+		//prepare depth data
+		float px = dir[i][0] * 3.0f;
+		float py = dir[i][1] * 3.0f;
+		float pz = dir[i][2] * 3.0f;
+		
+		//prepare height data
+		float hx = upVector[count][0];
+		float hy = upVector[count][1];
+		float hz = upVector[count][2];
+		
+		//bottom of cart
+		glBegin(GL_QUADS);
+		    glVertex3f(pos[i][0]+(dx*0.02f),
+				pos[i][1], 
+				pos[i][2]+(dz*0.02f));
+		    glVertex3f(pos[i][0]+(dx*0.02f)+px,
+				pos[i][1]+py, 
+				pos[i][2]+(dz*0.02f)+pz);
+		    glVertex3f(pos[i][0]-(dx*0.02f)+px, 
+				pos[i][1]+py, 
+				pos[i][2]-(dz*0.02f)+pz);
+		    glVertex3f(pos[i][0]-(dx*0.02f), 
+				pos[i][1], 
+				pos[i][2]-(dz*0.02f));
+		glEnd();
+		
+		glBegin(GL_QUADS);
+		    glVertex3f(pos[i][0]+(dx*0.02f)+px,
+				pos[i][1]+py, 
+				pos[i][2]+(dz*0.02f)+pz);
+		    glVertex3f(pos[i][0]+(dx*0.02f)+px,
+				pos[i][1]+py+0.01f, 
+				pos[i][2]+(dz*0.02f)+pz);
+		    glVertex3f(pos[i][0]-(dx*0.02f)+px,
+				pos[i][1]+py+0.01f, 
+				pos[i][2]-(dz*0.02f)+pz);
+		    glVertex3f(pos[i][0]-(dx*0.02f)+px,
+				pos[i][1]+py, 
+				pos[i][2]-(dz*0.02f)+pz);
+		glEnd();
+		
+	    }
 	}
 	
 	glEnable(GL_LIGHTING);
@@ -462,15 +480,15 @@ void keyboard(unsigned char key, int, int)
     switch (key)
     {
 	case 'q': exit(1); break;
-	case 'p': for (int i=0; i<sizeof(pos)/sizeof(pos[0]); i++) {
+	case 'p': for (int i=sizeof(pos)/sizeof(pos[0]); i>-1; i--) {
 		      pos[i][0] = track[trackCounter[0]][0];
 		      pos[i][1] = track[trackCounter[0]][1];
 		      pos[i][2] = track[trackCounter[0]][2];
+		      trackCounter[i] = trackCounter[0];
 		      setNextTrack(i);
 		  }
 		  //when positioned, space the carts out
 		  spaceCarts();
-		  glutPostRedisplay();
 		  break;
 
 	case ' ': g_moving = !g_moving;
@@ -479,7 +497,12 @@ void keyboard(unsigned char key, int, int)
 		  else
 			  glutIdleFunc(NULL);
 		  break;
+	case 'n': g_normals = !g_normals;
+		  break;
+	case 'd': g_carts = !g_carts;
+		  break;
 	case 'z': g_coasting = !g_coasting;
+		  break;
     }
     glutPostRedisplay();
 }
