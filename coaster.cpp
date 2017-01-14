@@ -11,9 +11,8 @@
 #include <unistd.h>
 #include <math.h>
 
-#include "load_and_bind_texture.h"
-
 //create multi-dimensional array for the track
+//hard coded smooth-ish track
 float track[][3] = {{0.6, 0.8, -0.7},
 		   {0.3, 0.7, -0.65},
 		   {0.2, 0.6, -0.62},
@@ -74,8 +73,7 @@ float track[][3] = {{0.6, 0.8, -0.7},
 float perpTrack[sizeof(track)/sizeof(track[0])][2];
 float upVector[sizeof(track)/sizeof(track[0])][3];
 
-int trackCounter[] = {0, 0, 0}; //counts which index in the track is next
-int loopCount[] = {0, 0, 0};
+int static STARTING_TRACK = 0;
 
 // properties of some material
 float mat_ambient[] = {0.05, 0.05, 0.05, 1.0};
@@ -83,19 +81,18 @@ float mat_diffuse[] = {0.75, 0.75, 0.75, 1.0};
 float mat_specular[] = {1.0, 1.0, 1.0, 1.0};
 float mat_shininess[] = {50.0};
 
-//need 3 carts
-float pos[][3] = {{track[0][0], track[0][1], track[0][2]},
-		  {track[0][0], track[0][1], track[0][2]},
-		  {track[0][0], track[0][1], track[0][2]}};
+//need 3 carts at least, change first val to set cart count
+float pos[3][3];
 float dir[sizeof(pos)/sizeof(pos[0])][3];
 float speed = 1.0f;
+
+int trackCounter[sizeof(pos)/sizeof(pos[0])]; //counts which index in the track is next
+int loopCount[sizeof(pos)/sizeof(pos[0])];
 
 bool g_moving = false;
 bool g_coasting = false;
 bool g_normals = false;
 bool g_carts = true;
-
-unsigned int g_track = 0;
 
 void setNextTrack(int i) {
     trackCounter[i] = (trackCounter[i] + 1) % (sizeof(track)/sizeof(track[0]));
@@ -116,11 +113,24 @@ void setNextTrack(int i) {
     */
 }
 
-//initialise the direction for the carts
-void initialDirection() {
-    for (int i=0; i<sizeof(pos)/sizeof(pos[0]); i++) {
-	setNextTrack(i);
+//method to move forward the index specified cart
+void moveCart(int i) {
+    pos[i][0] += dir[i][0]*speed;
+    pos[i][1] += dir[i][1]*speed;
+    pos[i][2] += dir[i][2]*speed;
+    
+    if (i == 0) {
+	//change speed based on how much we should accelerate
+	float dist = sqrt((dir[i][0]*dir[i][0]) + (dir[i][2]*dir[i][2]));
+	float angle = atan(dir[i][1]/dist);
+	float acceleration = (-sin(angle)*9.81)/60; 
+	if (angle < 0.0f) acceleration -= 0.05f;
+	speed += acceleration; 
+	if (speed < 1.0f) speed = 1.0f; //always maintain minimum speed
+	//std::cout << "Speed is currently " << speed << std::endl;
+	
     }
+    
 }
 
 //method to check whether we are on to a new track position
@@ -148,24 +158,42 @@ void checkTrackPos(int i) {
     }
 }
 
-//method to move forward the index specified cart
-void moveCart(int i) {
-    pos[i][0] += dir[i][0]*speed;
-    pos[i][1] += dir[i][1]*speed;
-    pos[i][2] += dir[i][2]*speed;
-    
-    if (i == 0) {
-	//change speed based on how much we should accelerate
-	float dist = sqrt((dir[i][0]*dir[i][0]) + (dir[i][2]*dir[i][2]));
-	float angle = atan(dir[i][1]/dist);
-	float acceleration = (-sin(angle)*9.81)/60; 
-	if (angle < 0.0f) acceleration -= 0.05f;
-	speed += acceleration; 
-	if (speed < 1.0f) speed = 1.0f; //always maintain minimum speed
-	//std::cout << "Speed is currently " << speed << std::endl;
+//spaces the carts out so that reversing doesn't occur
+void spaceCarts() {
+    for (int i=(sizeof(pos)/sizeof(pos[0]))-1; i>-1; i--) {
 	
+	//make sure that the carts aren't too far apart and speed them up if they are
+	//slow them down if they are too close
+	float dx = pos[i][0] - pos[i-1][0];
+	float dy = pos[i][1] - pos[i-1][1];
+	float dz = pos[i][2] - pos[i-1][2];
+	float dist =  sqrt((dx*dx)+(dy*dy)+(dz*dz));
+	
+	while (dist < 0.1f) {
+	    //need to move all carts in front of this one forward
+	    //has to move front one last, since that is the one that informs speed
+	    for (int j=i-1; j>-1; j--) {
+		moveCart(j);
+		checkTrackPos(j);
+	    }
+	    dx = pos[i][0] - pos[i-1][0];
+	    dy = pos[i][1] - pos[i-1][1];
+	    dz = pos[i][2] - pos[i-1][2];
+	    dist =  sqrt((dx*dx)+(dy*dy)+(dz*dz));
+	}
     }
-    
+}
+
+//initialise the direction for the carts
+void initialiseCarts() {
+    for (int i=0; i<sizeof(pos)/sizeof(pos[0]); i++) {
+	pos[i][0] = track[STARTING_TRACK][0];
+	pos[i][1] = track[STARTING_TRACK][1];
+	pos[i][2] = track[STARTING_TRACK][2];
+	trackCounter[i] = STARTING_TRACK;
+	loopCount[i] = 0;
+	setNextTrack(i);
+    }
 }
 
 void idle()
@@ -425,21 +453,6 @@ void display()
 				pos[i][2]-(dz*0.02f));
 		glEnd();
 		
-		glBegin(GL_QUADS);
-		    glVertex3f(pos[i][0]+(dx*0.02f)+px,
-				pos[i][1]+py, 
-				pos[i][2]+(dz*0.02f)+pz);
-		    glVertex3f(pos[i][0]+(dx*0.02f)+px,
-				pos[i][1]+py+0.01f, 
-				pos[i][2]+(dz*0.02f)+pz);
-		    glVertex3f(pos[i][0]-(dx*0.02f)+px,
-				pos[i][1]+py+0.01f, 
-				pos[i][2]-(dz*0.02f)+pz);
-		    glVertex3f(pos[i][0]-(dx*0.02f)+px,
-				pos[i][1]+py, 
-				pos[i][2]-(dz*0.02f)+pz);
-		glEnd();
-		
 	    }
 	}
 	
@@ -447,32 +460,6 @@ void display()
 
     glPopMatrix();
     glutSwapBuffers(); 
-}
-
-//spaces the carts out so that reversing doesn't occur
-void spaceCarts() {
-    for (int i=(sizeof(pos)/sizeof(pos[0]))-1; i>-1; i--) {
-	
-	//make sure that the carts aren't too far apart and speed them up if they are
-	//slow them down if they are too close
-	float dx = pos[i][0] - pos[i-1][0];
-	float dy = pos[i][1] - pos[i-1][1];
-	float dz = pos[i][2] - pos[i-1][2];
-	float dist =  sqrt((dx*dx)+(dy*dy)+(dz*dz));
-	
-	while (dist < 0.1f) {
-	    //need to move all carts in front of this one forward
-	    //has to move front one last, since that is the one that informs speed
-	    for (int j=i-1; j>-1; j--) {
-		moveCart(j);
-		checkTrackPos(j);
-	    }
-	    dx = pos[i][0] - pos[i-1][0];
-	    dy = pos[i][1] - pos[i-1][1];
-	    dz = pos[i][2] - pos[i-1][2];
-	    dist =  sqrt((dx*dx)+(dy*dy)+(dz*dz));
-	}
-    }
 }
 
 void keyboard(unsigned char key, int, int)
@@ -580,21 +567,14 @@ void init()
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     
-    g_track = load_and_bind_texture("./track.png");
-    
     //make sure that the texture wraps
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    
-    GLenum error = glGetError();
-    if (error!=GL_NO_ERROR)
-	fprintf(stderr, "GL error %s\n", gluErrorString(error));
 
     glEnable(GL_DEPTH_TEST);
     glShadeModel(GL_SMOOTH);
     
     //make sure the carts are seperated first
-    initialDirection();
-    spaceCarts();
+    initialiseCarts();
     calcPerpTrack();
     calcUpVectors();
 }
