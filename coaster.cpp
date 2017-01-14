@@ -585,9 +585,16 @@ void calcUpVectors() {
 	float perpZ = (dx*py) - (dy*px);
 	dist = sqrt((perpX*perpX)+(perpY*perpY)+(perpZ*perpZ));
 	
-	upVector[i][0] = perpX / dist;
-	upVector[i][1] = perpY / dist;
-	upVector[i][2] = perpZ / dist;
+	//for the sake of simplicity, don't let things go upside down
+	if (perpY < 0) {
+	    upVector[i][0] = -perpX / dist;
+	    upVector[i][1] = -perpY / dist;
+	    upVector[i][2] = -perpZ / dist;
+	} else {
+	    upVector[i][0] = perpX / dist;
+	    upVector[i][1] = perpY / dist;
+	    upVector[i][2] = perpZ / dist;
+	}
     }
 }
 
