@@ -403,51 +403,55 @@ void display()
 			glEnd();
 		    }
 		}
-		if (g_mesh && hasMesh[i]) {
-		    //std::cout << i << " has a mesh" << std::endl;
-		    glColor4f(0.6f, 0.3f, 0.3f, 1.0f);
-		    if ((int)(cD*100) % 2 == 0) {
-			float tmpX = x+(px*0.008f);
-			float tmpY = y;
-			float tmpZ = z+(pz*0.008f);
-			float depth = 0.0f;
-			while (y - depth > -1.0f) {
-			    //reset the vals
-			    tmpX = x-(px*0.008f);
-			    tmpY = y-depth;
-			    tmpZ = z-(pz*0.008f);
-			    
-			    glBegin(GL_LINE_STRIP);
-				glVertex3f(tmpX, tmpY, tmpZ);
-				//while (tmpY > -1.0f) {
-				    tmpX += dx*(dist-cD);
-				    tmpY -= (dist-cD);
-				    tmpZ += dz*(dist-cD);
-				    glVertex3f(tmpX, tmpY, tmpZ);
-				    tmpX -= dx*(dist-cD);
-				    tmpY -= (dist-cD);
-				    tmpZ -= dz*(dist-cD);
-				    glVertex3f(tmpX, tmpY, tmpZ);
-				//}
-			    glEnd();
-			    if (cD == 0.0f) depth += 0.05f;
-			    else depth = y + 1.2f;
-			}
-			
-			//now do other side
-			tmpX = x-(px*0.008f);
-			tmpY = y;
-			tmpZ = z-(pz*0.008f);
-			glBegin(GL_LINES);
-			    glVertex3f(tmpX, tmpY, tmpZ);
-			    tmpX += dx*(dist-cD);
-			    tmpY -= dist-cD;
-			    tmpZ += dz*(dist-cD);
-			    glVertex3f(tmpX, tmpY, tmpZ);
-			glEnd();
-		    }
-		}
 		cD += 0.01f;
+	    }
+	    
+	    
+	    if (g_mesh && hasMesh[i]) {
+		//std::cout << i << " has a mesh" << std::endl;
+		glColor4f(0.6f, 0.3f, 0.3f, 1.0f);
+		float tmpX = track[i][0]+(px*0.008f);
+		float tmpY = -1.0f;
+		float tmpZ = track[i][2]+(pz*0.008f);
+		while (tmpY < track[i][1]) {
+		    
+		    glBegin(GL_LINES);
+			glVertex3f(tmpX, tmpY, tmpZ);
+			//make sure this isn't going to go above the track
+			if (tmpY+0.3f > track[j][1]) {
+			    //need to find spot where this meets the track
+			    float meetingY = ((tmpY*track[j][1])-((tmpY+0.3f)*track[i][1])) /
+				  (tmpY + track[j][1] - track[i][1] - (tmpY+0.3f));
+			    //find this point on the track
+			    float tmpDist = (meetingY - track[i][1]) / dy;
+			    glVertex3f(tmpX+(dx*tmpDist), track[i][1]+(dy*tmpDist), tmpZ+(dz*tmpDist));
+			} else
+			    glVertex3f(tmpX+(dx*dist), tmpY+0.3f, tmpZ+(dz*dist));
+		    glEnd();
+		    tmpY += 0.05f;
+		}
+		
+		//now do other side
+		tmpX = track[j][0]-(px*0.008f);
+		tmpY = -1.0f;
+		tmpZ = track[j][2]-(pz*0.008f);
+		while (tmpY < track[j][1]) {
+		    
+		    glBegin(GL_LINES);
+			glVertex3f(tmpX, tmpY, tmpZ);
+			//make sure this isn't going to go above the track
+			if (tmpY+0.3f > track[i][1]) {
+			    //need to find spot where this meets the track
+			    float meetingY = ((tmpY*track[i][1])-((tmpY+0.3f)*track[j][1])) /
+				  (tmpY + track[i][1] - track[j][1] - (tmpY+0.3f));
+			    //find this point on the track
+			    float tmpDist = (track[j][1] - meetingY) / dy;
+			    glVertex3f(tmpX-(dx*tmpDist), track[j][1]-(dy*tmpDist), tmpZ-(dz*tmpDist));
+			} else
+			    glVertex3f(tmpX-(dx*dist), tmpY+0.3f, tmpZ-(dz*dist));
+		    glEnd();
+		    tmpY += 0.05f;
+		}
 	    }
 	    
 	    float x = track[i][0];
@@ -607,7 +611,7 @@ void calcPerpTrack() {
 	
 	//also notify for mesh
 	//only one in example track which shouldn't have mesh
-	hasMesh[i] = (i!=35);
+	hasMesh[i] = (i != 35);
     }
 }
 
